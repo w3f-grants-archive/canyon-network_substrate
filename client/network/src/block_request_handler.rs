@@ -131,6 +131,8 @@ impl <B: BlockT> BlockRequestHandler<B> {
 		let get_header = attributes.contains(BlockAttributes::HEADER);
 		let get_body = attributes.contains(BlockAttributes::BODY);
 		let get_justification = attributes.contains(BlockAttributes::JUSTIFICATION);
+		// WIP(JON): likely need to change this to also use attribute.contains logic?
+		let support_multiple_justifications = request.support_multiple_justifications;
 
 		let mut blocks = Vec::new();
 		let mut block_id = from_block_id;
@@ -146,22 +148,33 @@ impl <B: BlockT> BlockRequestHandler<B> {
 				None
 			};
 
-			// TODO: In a follow up PR tracked by https://github.com/paritytech/substrate/issues/8172
-			// we want to send/receive all Justifications if possible.
-			// For now we keep compatibility by selecting precisely the GRANDPA one, and not just
-			// the first one. When sending we could have just taken the first one, since we don't
-			// expect there to be any other kind currently, but when receiving we need to add the
-			// engine ID tag.
-			// The ID tag is hardcoded here to avoid depending on the GRANDPA crate, and will be
-			// removed when resolving the above issue.
-			let justification = justifications.map(|just| just.into_justification(*b"FRNK"));
+			let (justifications, justification, is_empty_justification) =
+				if support_multiple_justifications {
+					let justifications = match justifications {
+						Some(v) => v.encode(),
+						None => Vec::new(),
+					};
+					(justifications, Vec::new(), false)
+				} else {
+					// For now we keep compatibility by selecting precisely the GRANDPA one, and not just
+					// the first one. When sending we could have just taken the first one, since we don't
+					// expect there to be any other kind currently, but when receiving we need to add the
+					// engine ID tag.
+					// The ID tag is hardcoded here to avoid depending on the GRANDPA crate, and will be
+					// removed as part of resolving issue NNN ...
+					// WIP(JON) insert issue here for tracking removing this
+					let justification =
+						justifications.map(|just| just.into_justification(*b"FRNK"));
 
-			let is_empty_justification = justification
-				.as_ref()
-				.map(|j| j.as_ref().map(|j| j.is_empty()).unwrap_or(false))
-				.unwrap_or(false);
+					let is_empty_justification = justification
+						.as_ref()
+						.map(|j| j.as_ref().map(|j| j.is_empty()).unwrap_or(false))
+						.unwrap_or(false);
 
-			let justification = justification.unwrap_or_default().unwrap_or_default();
+					let justification = justification.unwrap_or_default().unwrap_or_default();
+
+					(Vec::new(), justification, is_empty_justification)
+				};
 
 			let body = if get_body {
 				match self.client.block_body(&BlockId::Hash(hash))? {
@@ -189,6 +202,7 @@ impl <B: BlockT> BlockRequestHandler<B> {
 				message_queue: Vec::new(),
 				justification,
 				is_empty_justification,
+				justifications,
 			};
 
 			total_size += block_data.body.len();

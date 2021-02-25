@@ -29,6 +29,8 @@ message BlockRequest {
 	Direction direction = 5;
 	// Maximum number of blocks to return. An implementation defined maximum is used when unspecified.
 	uint32 max_blocks = 6; // optional
+	// The type of justifications we support.
+	bool support_multiple_justifications = 7; // optional
 }
 
 // Response to `BlockRequest`
@@ -56,5 +58,9 @@ message BlockData {
 	// doesn't make in possible to differentiate between a lack of justification and an empty
 	// justification.
 	bool is_empty_justification = 7; // optional, false if absent
+	// Justificationss if requested.
+	// Unlike the case for single Justifications this will not be empty even if the contained
+	// Justifications itself are present but empty, since they contain the conensus engine ID.
+	bytes justifications = 8; // optional
 }
 
