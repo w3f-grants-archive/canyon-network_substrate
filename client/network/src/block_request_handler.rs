@@ -131,7 +131,6 @@ impl <B: BlockT> BlockRequestHandler<B> {
 		let get_header = attributes.contains(BlockAttributes::HEADER);
 		let get_body = attributes.contains(BlockAttributes::BODY);
 		let get_justification = attributes.contains(BlockAttributes::JUSTIFICATION);
-		// WIP(JON): likely need to change this to also use attribute.contains logic?
 		let support_multiple_justifications = request.support_multiple_justifications;
 
 		let mut blocks = Vec::new();
