@@ -131,7 +131,7 @@ impl <B: BlockT> BlockRequestHandler<B> {
 		let get_header = attributes.contains(BlockAttributes::HEADER);
 		let get_body = attributes.contains(BlockAttributes::BODY);
 		let get_justification = attributes.contains(BlockAttributes::JUSTIFICATION);
-		let support_multiple_justifications = request.support_multiple_justifications;
+		let get_justifications = attributes.contains(BlockAttributes::JUSTIFICATIONS);
 
 		let mut blocks = Vec::new();
 		let mut block_id = from_block_id;
@@ -141,14 +141,14 @@ impl <B: BlockT> BlockRequestHandler<B> {
 			let number = *header.number();
 			let hash = header.hash();
 			let parent_hash = *header.parent_hash();
-			let justifications = if get_justification {
+			let justifications = if get_justification || get_justifications {
 				self.client.justifications(&BlockId::Hash(hash))?
 			} else {
 				None
 			};
 
 			let (justifications, justification, is_empty_justification) =
-				if support_multiple_justifications {
+				if get_justifications {
 					let justifications = match justifications {
 						Some(v) => v.encode(),
 						None => Vec::new(),

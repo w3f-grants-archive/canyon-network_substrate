@@ -448,7 +448,7 @@ impl<B: BlockT> ChainSync<B> {
 		block_announce_validator: Box<dyn BlockAnnounceValidator<B> + Send>,
 		max_parallel_downloads: u32,
 	) -> Self {
-		let mut required_block_attributes = BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION;
+		let mut required_block_attributes = BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION | BlockAttributes::JUSTIFICATIONS;
 
 		if role.is_full() {
 			required_block_attributes |= BlockAttributes::BODY
@@ -697,7 +697,7 @@ impl<B: BlockT> ChainSync<B> {
 					.state = PeerSyncState::DownloadingJustification(request.0);
 				let req = message::generic::BlockRequest {
 					id: 0,
-					fields: BlockAttributes::JUSTIFICATION,
+					fields: BlockAttributes::JUSTIFICATION | BlockAttributes::JUSTIFICATIONS,
 					from: message::FromBlock::Hash(request.0),
 					to: None,
 					direction: message::Direction::Ascending,
@@ -1630,7 +1630,7 @@ pub(crate) struct Metrics {
 fn ancestry_request<B: BlockT>(block: NumberFor<B>) -> BlockRequest<B> {
 	message::generic::BlockRequest {
 		id: 0,
-		fields: BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION,
+		fields: BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION | BlockAttributes::JUSTIFICATIONS,
 		from: message::FromBlock::Number(block),
 		to: None,
 		direction: message::Direction::Ascending,
@@ -2050,7 +2050,7 @@ mod test {
 		// new peer which is at the given block
 		assert!(sync.justification_requests().any(|(p, r)| {
 			p == peer_id3
-				&& r.fields == BlockAttributes::JUSTIFICATION
+				&& r.fields == BlockAttributes::JUSTIFICATION | BlockAttributes::JUSTIFICATIONS
 				&& r.from == message::FromBlock::Hash(b1_hash)
 				&& r.to == None
 		}));

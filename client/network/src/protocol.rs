@@ -1210,7 +1210,6 @@ fn prepare_block_request<B: BlockT>(
 		to_block: request.to.map(|h| h.encode()).unwrap_or_default(),
 		direction: request.direction as i32,
 		max_blocks: request.max.unwrap_or(0),
-		support_multiple_justifications: true,
 	};
 
 	CustomMessageOutcome::BlockRequest {
