@@ -25,7 +25,7 @@ macro_rules! log {
 	($level:tt, $pattern:expr $(, $values:expr)* $(,)?) => {
 		log::$level!(
 			target: $crate::LOG_TARGET,
-			concat!("🗳 ", $pattern) $(, $values)*
+			concat!("[#{:?}] 🗳  ", $pattern), <frame_system::Module<T>>::block_number() $(, $values)*
 		)
 	};
 }
@@ -49,7 +49,7 @@ pub fn generate_voter_cache<T: Config>(
 
 /// Create a function the returns the index a voter in the snapshot.
 ///
-/// The returning index type is the same as the one defined in [`T::CompactSolution::Voter`].
+/// The returning index type is the same as the one defined in `T::CompactSolution::Voter`.
 ///
 /// ## Warning
 ///
@@ -92,7 +92,7 @@ pub fn voter_index_fn_linear<T: Config>(
 
 /// Create a function the returns the index a targets in the snapshot.
 ///
-/// The returning index type is the same as the one defined in [`T::CompactSolution::Target`].
+/// The returning index type is the same as the one defined in `T::CompactSolution::Target`.
 pub fn target_index_fn_linear<T: Config>(
 	snapshot: &Vec<T::AccountId>,
 ) -> Box<dyn Fn(&T::AccountId) -> Option<CompactTargetIndexOf<T>> + '_> {
