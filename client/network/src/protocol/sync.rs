@@ -448,7 +448,9 @@ impl<B: BlockT> ChainSync<B> {
 		block_announce_validator: Box<dyn BlockAnnounceValidator<B> + Send>,
 		max_parallel_downloads: u32,
 	) -> Self {
-		let mut required_block_attributes = BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION | BlockAttributes::JUSTIFICATIONS;
+		let mut required_block_attributes = BlockAttributes::HEADER
+			| BlockAttributes::JUSTIFICATION
+			| BlockAttributes::JUSTIFICATIONS;
 
 		if role.is_full() {
 			required_block_attributes |= BlockAttributes::BODY
@@ -1630,7 +1632,9 @@ pub(crate) struct Metrics {
 fn ancestry_request<B: BlockT>(block: NumberFor<B>) -> BlockRequest<B> {
 	message::generic::BlockRequest {
 		id: 0,
-		fields: BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION | BlockAttributes::JUSTIFICATIONS,
+		fields: BlockAttributes::HEADER
+			| BlockAttributes::JUSTIFICATION
+			| BlockAttributes::JUSTIFICATIONS,
 		from: message::FromBlock::Number(block),
 		to: None,
 		direction: message::Direction::Ascending,
