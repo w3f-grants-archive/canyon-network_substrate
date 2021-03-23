@@ -40,7 +40,7 @@ use sp_io::hashing::blake2_256;
 use frame_support::{
 	assert_ok, assert_err, assert_err_ignore_postinfo,
 	parameter_types, assert_storage_noop,
-	traits::{Currency, ReservableCurrency, OnInitialize, GenesisBuild},
+	traits::{Currency, ReservableCurrency, OnInitialize},
 	weights::{Weight, PostDispatchInfo, DispatchClass, constants::WEIGHT_PER_SECOND},
 	dispatch::DispatchErrorWithPostInfo,
 	storage::child,
@@ -63,7 +63,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Randomness: pallet_randomness_collective_flip::{Pallet, Call, Storage},
-		Contracts: pallet_contracts::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -255,6 +255,7 @@ parameter_types! {
 	pub const DeletionQueueDepth: u32 = 1024;
 	pub const DeletionWeightLimit: Weight = 500_000_000_000;
 	pub const MaxCodeSize: u32 = 2 * 1024;
+	pub MySchedule: Schedule<Test> = <Schedule<Test>>::default().enable_println(true);
 }
 
 parameter_types! {
@@ -288,6 +289,7 @@ impl Config for Test {
 	type DeletionQueueDepth = DeletionQueueDepth;
 	type DeletionWeightLimit = DeletionWeightLimit;
 	type MaxCodeSize = MaxCodeSize;
+	type Schedule = MySchedule;
 }
 
 pub const ALICE: AccountId32 = AccountId32::new([1u8; 32]);
@@ -320,12 +322,6 @@ impl ExtBuilder {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 		pallet_balances::GenesisConfig::<Test> {
 			balances: vec![],
-		}.assimilate_storage(&mut t).unwrap();
-		pallet_contracts::GenesisConfig {
-			current_schedule: Schedule::<Test> {
-				enable_println: true,
-				..Default::default()
-			},
 		}.assimilate_storage(&mut t).unwrap();
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
@@ -2781,9 +2777,10 @@ fn reinstrument_does_charge() {
 		// They should match because both where called with the same schedule.
 		assert_eq!(result0.gas_consumed, result1.gas_consumed);
 
-		// Update the schedule version but keep the rest the same
-		crate::CurrentSchedule::mutate(|old: &mut Schedule<Test>| {
-			old.version += 1;
+		// We cannot change the schedule. Instead, we decrease the version of the deployed
+		// contract below the current schedule's version.
+		crate::CodeStorage::mutate(&code_hash, |code: &mut Option<PrefabWasmModule<Test>>| {
+			code.as_mut().unwrap().decrement_version();
 		});
 
 		// This call should trigger reinstrumentation

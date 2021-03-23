@@ -454,7 +454,7 @@ macro_rules! cost_byte_batched {
 impl<T: Config> Default for Schedule<T> {
 	fn default() -> Self {
 		Self {
-			version: 0,
+			version: 1,
 			enable_println: false,
 			limits: Default::default(),
 			instruction_weights: Default::default(),

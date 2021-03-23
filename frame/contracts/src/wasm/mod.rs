@@ -140,6 +140,12 @@ where
 	pub fn refcount(&self) -> u64 {
 		self.refcount
 	}
+
+	/// Decrement schedule_version by 1. Panics if it is already 0.
+	#[cfg(test)]
+	pub fn decrement_version(&mut self) {
+		self.schedule_version = self.schedule_version.checked_sub(1).unwrap();
+	}
 }
 
 impl<T: Config> Executable<T> for PrefabWasmModule<T>
