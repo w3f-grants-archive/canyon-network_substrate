@@ -3329,6 +3329,37 @@ fn payout_stakers_handles_basic_errors() {
 }
 
 #[test]
+fn payout_stakers_handles_weight_refund() {
+	ExtBuilder::default().has_stakers(false).build_and_execute(|| {
+		let balance = 1000;
+		// Create an active validator stash/controller pair each with balance
+		bond_validator(11, 10, balance); // Default(64)
+		// MaxNominatorRewardedPerValidator is set to 64, so we do half of that (counting the validator as nominating itself).
+		for i in 0..31 {
+			bond_nominator(1000 + i, 100 + i, balance + i as Balance, vec![11]);
+		}
+		// Progress to era 1
+		mock::start_active_era(1);
+		// Reward the validator we have created with 1 reward point
+		Staking::reward_by_ids(vec![(11, 1)]);
+
+		// compute and ensure the reward amount is greater than zero.
+		let _ = current_total_payout_for_duration(reward_time_per_era()); // DEV TODO not sure if this is strictly necessary
+		// Progress to era 2 so we can collect rewards for era 1
+		mock::start_active_era(2);
+		// Test with half of MaxNominators
+		assert_ok!(Staking::payout_stakers(Origin::signed(20), 11, 1));
+		// notes:
+		// https://github.com/paritytech/substrate/blob/master/frame/utility/src/tests.rs#L355
+		// make sure your tests use some well controlled weight configuration
+
+		// TODO test with No rewards
+
+		// TODO Test with max nominators
+	});
+}
+
+#[test]
 fn bond_during_era_correctly_populates_claimed_rewards() {
 	ExtBuilder::default().has_stakers(false).build_and_execute(|| {
 		// Era = None
