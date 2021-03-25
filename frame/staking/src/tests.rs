@@ -3358,48 +3358,44 @@ fn payout_stakers_handles_basic_errors() {
 fn payout_stakers_handles_weight_refund() {
 	// N.B. test rely on the assumptions `payout_stakers_alive_staked` is solely used to calculate weight
 	ExtBuilder::default().has_stakers(false).build_and_execute(|| {
-		// let max_nom_rewarded: u32 = Staking::MaxNominatorRewardedPerValidator(); // DEV TODO figure out how to get this to grab the const
 		let max_nom_rewarded: u32 = 64;
 		let max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(max_nom_rewarded);
-		let half_max_nom_rewarded = max_nom_rewarded / 2; // TODO use different division
+		let half_max_nom_rewarded = max_nom_rewarded.checked_div(2).unwrap();
 		let half_max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(half_max_nom_rewarded + 1);
 
 		let zero_payouts_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
 
 		let balance = 1000;
-		// Create an active validator stash/controller pair each with balance
-		// DEV TODO this will need be adjust for a more controlled weight
-		bond_validator(11, 10, balance); // Default(64)
-		// MaxNominatorRewardedPerValidator is set to 64, so we do half of that (counting the validator as nominating itself).
+		bond_validator(11, 10, balance);
 		for i in 0..half_max_nom_rewarded {
 			bond_nominator((1000 + i).into(), (100 + i).into(), balance + i as Balance, vec![11]);
 		}
+
 		/* Era 1*/
-		// the validator does not get any rewards in this era
 		start_active_era(1);
+		// The validator does not get any rewards in this era.
 
 		/* Era 2 */
 		start_active_era(2);
 
-		// collect payouts when the validator got no rewards for the era
+		// Collect payouts when the validator got no rewards for the era
 		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 1));
 		let info = call.get_dispatch_info();
 		let result = call.dispatch(Origin::signed(20));
 		assert_ok!(result);
 
-		// DEV TODO Maybe assert the rewards are 0
 		assert_eq!(extract_actual_weight(&result, &info), zero_payouts_weight);
 
-		// give the validator reward points for the first time so they can collect in the next era
+		// Give the validator reward points for the first time so they can collect in the next era.
 		Staking::reward_by_ids(vec![(11, 1)]);
 
-		// compute and ensure the reward amount is greater than zero.
+		// Compute and ensure the reward amount is greater than zero.
 		let _ = current_total_payout_for_duration(reward_time_per_era());
 
 		/* Era 3 */
 		start_active_era(3);
 
-		// collect payouts when the validator had `half_max_nom_rewarded` nominators
+		// Collect payouts when the validator has `half_max_nom_rewarded` nominators.
 		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 2));
 		let info = call.get_dispatch_info();
 		let result = call.dispatch(Origin::signed(20));
@@ -3413,29 +3409,30 @@ fn payout_stakers_handles_weight_refund() {
 		}
 
 		/* Era 4 */
-		// we now have `max_nom_rewarded` nominators actively nominating our validator
 		start_active_era(4);
+		// We now have `max_nom_rewarded` nominators actively nominating our validator.
 
 		Staking::reward_by_ids(vec![(11, 1)]);
 
-		// compute and ensure the reward amount is greater than zero.
+		// Compute and ensure the reward amount is greater than zero.
 		let _ = current_total_payout_for_duration(reward_time_per_era());
 
 		/* Era 5 */
 		start_active_era(5);
-		// collect payouts when the validator had `half_max_nom_rewarded` nominators
+
+		// Collect payouts when the validator had `half_max_nom_rewarded` nominators
 		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 4));
 		let info = call.get_dispatch_info();
 		let result = call.dispatch(Origin::signed(20));
 		assert_ok!(result);
 		assert_eq!(extract_actual_weight(&result, &info), max_nom_rewarded_weight);
 
-		// try and collect payouts for an era that has already been collected
+		// Try and collect payouts for an era that has already been collected.
 		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 4));
 		let info = call.get_dispatch_info();
 		let result = call.dispatch(Origin::signed(20));
 		assert!(result.is_err());
-		// when there is an error the consumed weight == weight when there are 0 payouts
+		// When there is an error the consumed weight == weight when there are 0 payouts.
 		assert_eq!(extract_actual_weight(&result, &info), zero_payouts_weight);
 	});
 }
