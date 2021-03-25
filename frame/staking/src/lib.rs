@@ -1831,7 +1831,7 @@ decl_module! {
 		///   NOTE: weights are assuming that payouts are made to alive stash account (Staked).
 		///   Paying even a dead controller is cheaper weight-wise. We don't do any refunds here.
 		/// # </weight>
-		#[weight = T::WeightInfo::payout_stakers_alive_staked(T::MaxNominatorRewardedPerValidator::get())] // DEV TODO should this be replaced since used weight will now always be explicit
+		#[weight = T::WeightInfo::payout_stakers_alive_staked(T::MaxNominatorRewardedPerValidator::get())]
 		fn payout_stakers(origin, validator_stash: T::AccountId, era: EraIndex) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 			Self::do_payout_stakers(validator_stash, era)
@@ -1999,9 +1999,6 @@ impl<T: Config> Module<T> {
 	fn do_payout_stakers(validator_stash: T::AccountId, era: EraIndex) -> DispatchResultWithPostInfo {
 		// Validate input data
 		let current_era = CurrentEra::get().ok_or(
-			// TODO REVIEW this is ugly but since payout_stakers_alive_staked does computation
-			// I thought it was best to get the weight lazily for all the errors despite verbosity
-			// If weights though are static then it would make sense to just save this to a var at the beggining
 			Error::<T>::InvalidEraToReward.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		)?;
 		ensure!(
@@ -2056,9 +2053,6 @@ impl<T: Config> Module<T> {
 
 		// Nothing to do if they have no reward points.
 		if validator_reward_points.is_zero() {
-			// DEV TODO `T::WeightInfo::payout_stakers_alive_staked` still has a baseline weight when `n` is 0,
-			// so I think it makes sense to use that baseline (assuming it accurately reflects tha max 
-			// weight that could have been used up until this point)
 			return Ok(Some(T::WeightInfo::payout_stakers_alive_staked(0)).into())
 		}
 
@@ -2086,7 +2080,7 @@ impl<T: Config> Module<T> {
 		let validator_staking_payout = validator_exposure_part * validator_leftover_payout;
 
 		// Track the number of payouts in order to track the actual weight
-		let mut payout_count: u32 = 0; // REVIEW TODO should this type track `T::MaxNominatorRewardedPerValidator` or `usize`?
+		let mut payout_count: u32 = 0;
 
 		// We can now make total validator payout:
 		if let Some(imbalance) = Self::make_payout(
@@ -2107,7 +2101,6 @@ impl<T: Config> Module<T> {
 
 			let nominator_reward: BalanceOf<T> = nominator_exposure_part * validator_leftover_payout;
 			// We can now make nominator payout:
-			// DEV TODO should `make_payout` return `Option<(Currency, Weight)>` and then we can sum the weights? ?
 			if let Some(imbalance) = Self::make_payout(&nominator.who, nominator_reward) {
 				// Note: We do not count payouts for `RewardDestination::None`.
 				payout_count += 1;
