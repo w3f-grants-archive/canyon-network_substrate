@@ -2001,6 +2001,7 @@ impl<T: Config> Module<T> {
 		let current_era = CurrentEra::get().ok_or(
 			// TODO REVIEW this is ugly but since payout_stakers_alive_staked does computation
 			// I thought it was best to get the weight lazily for all the errors despite verbosity
+			// If weights though are static then it would make sense to just save this to a var at the beggining
 			Error::<T>::InvalidEraToReward.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		)?;
 		ensure!(
@@ -2021,7 +2022,9 @@ impl<T: Config> Module<T> {
 					.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 			)?;
 
-		let controller = Self::bonded(&validator_stash).ok_or(Error::<T>::NotStash)?;
+		let controller = Self::bonded(&validator_stash).ok_or(
+			Error::<T>::NotStash.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
+		)?;
 		let mut ledger = <Ledger<T>>::get(&controller).ok_or_else(|| Error::<T>::NotController)?;
 
 		ledger.claimed_rewards.retain(|&x| x >= current_era.saturating_sub(history_depth));

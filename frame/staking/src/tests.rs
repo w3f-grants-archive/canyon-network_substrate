@@ -3289,6 +3289,9 @@ fn test_payout_stakers() {
 fn payout_stakers_handles_basic_errors() {
 	// Here we will test payouts handle all errors.
 	ExtBuilder::default().has_stakers(false).build_and_execute(|| {
+		// Consumed weight for all payout_stakers dispatches that fail
+		let err_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
+
 		// Same setup as the test above
 		let balance = 1000;
 		bond_validator(11, 10, balance); // Default(64)
@@ -3307,9 +3310,15 @@ fn payout_stakers_handles_basic_errors() {
 		mock::start_active_era(2);
 
 		// Wrong Era, too big
-		assert_noop!(Staking::payout_stakers(Origin::signed(1337), 11, 2), Error::<Test>::InvalidEraToReward);
+		assert_noop!(
+			Staking::payout_stakers(Origin::signed(1337), 11, 2),
+			Error::<Test>::InvalidEraToReward.with_weight(err_weight)
+		);
 		// Wrong Staker
-		assert_noop!(Staking::payout_stakers(Origin::signed(1337), 10, 1), Error::<Test>::NotStash);
+		assert_noop!(
+			Staking::payout_stakers(Origin::signed(1337), 10, 1),
+			Error::<Test>::NotStash.with_weight(err_weight)
+		);
 
 		for i in 3..100 {
 			Staking::reward_by_ids(vec![(11, 1)]);
@@ -3319,14 +3328,26 @@ fn payout_stakers_handles_basic_errors() {
 		}
 		// We are at era 99, with history depth of 84
 		// We should be able to payout era 15 through 98 (84 total eras), but not 14 or 99.
-		assert_noop!(Staking::payout_stakers(Origin::signed(1337), 11, 14), Error::<Test>::InvalidEraToReward);
-		assert_noop!(Staking::payout_stakers(Origin::signed(1337), 11, 99), Error::<Test>::InvalidEraToReward);
+		assert_noop!(
+			Staking::payout_stakers(Origin::signed(1337), 11, 14),
+			Error::<Test>::InvalidEraToReward.with_weight(err_weight)
+		);
+		assert_noop!(
+			Staking::payout_stakers(Origin::signed(1337), 11, 99),
+			Error::<Test>::InvalidEraToReward.with_weight(err_weight)
+		);
 		assert_ok!(Staking::payout_stakers(Origin::signed(1337), 11, 15));
 		assert_ok!(Staking::payout_stakers(Origin::signed(1337), 11, 98));
 
 		// Can't claim again
-		assert_noop!(Staking::payout_stakers(Origin::signed(1337), 11, 15), Error::<Test>::AlreadyClaimed);
-		assert_noop!(Staking::payout_stakers(Origin::signed(1337), 11, 98), Error::<Test>::AlreadyClaimed);
+		assert_noop!(
+			Staking::payout_stakers(Origin::signed(1337), 11, 15),
+			Error::<Test>::AlreadyClaimed.with_weight(err_weight)
+		);
+		assert_noop!(
+			Staking::payout_stakers(Origin::signed(1337), 11, 98),
+			Error::<Test>::AlreadyClaimed.with_weight(err_weight)
+		);
 	});
 }
 
