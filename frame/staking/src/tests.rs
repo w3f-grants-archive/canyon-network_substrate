@@ -20,13 +20,14 @@
 use super::*;
 use mock::*;
 use sp_runtime::{
-	assert_eq_error_rate, traits::BadOrigin,
+	assert_eq_error_rate,
+	traits::{BadOrigin, Dispatchable},
 };
 use sp_staking::offence::OffenceDetails;
 use frame_support::{
 	assert_ok, assert_noop, StorageMap,
 	traits::{Currency, ReservableCurrency, OnInitialize},
-	weights::extract_actual_weight,
+	weights::{extract_actual_weight, GetDispatchInfo},
 };
 use pallet_balances::Error as BalancesError;
 use substrate_test_utils::assert_eq_uvec;
@@ -3331,15 +3332,15 @@ fn payout_stakers_handles_basic_errors() {
 
 #[test]
 fn payout_stakers_handles_weight_refund() {
-	// DEV TODO maybe move or use a different import path? This is used for `.get_dispatch_info` and `.dispatch`
-	use crate::sp_api_hidden_includes_decl_storage::hidden_include::dispatch::{GetDispatchInfo, Dispatchable};
+	// N.B. test rely on the assumptions `payout_stakers_alive_staked` is solely used to calculate weight
 	ExtBuilder::default().has_stakers(false).build_and_execute(|| {
-
 		// let max_nom_rewarded: u32 = Staking::MaxNominatorRewardedPerValidator(); // DEV TODO figure out how to get this to grab the const
 		let max_nom_rewarded: u32 = 64;
 		let max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(max_nom_rewarded);
 		let half_max_nom_rewarded = max_nom_rewarded / 2; // TODO use different division
 		let half_max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(half_max_nom_rewarded + 1);
+
+		let zero_payouts_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
 
 		let balance = 1000;
 		// Create an active validator stash/controller pair each with balance
@@ -3361,7 +3362,7 @@ fn payout_stakers_handles_weight_refund() {
 		let info = call.get_dispatch_info();
 		let result = call.dispatch(Origin::signed(20));
 		assert_ok!(result);
-		let zero_payouts_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
+
 		// DEV TODO Maybe assert the rewards are 0
 		assert_eq!(extract_actual_weight(&result, &info), zero_payouts_weight);
 
@@ -3369,7 +3370,7 @@ fn payout_stakers_handles_weight_refund() {
 		Staking::reward_by_ids(vec![(11, 1)]);
 
 		// compute and ensure the reward amount is greater than zero.
-		let _ = current_total_payout_for_duration(reward_time_per_era()); // DEV TODO not sure if this is strictly necessary
+		let _ = current_total_payout_for_duration(reward_time_per_era());
 
 		/* Era 3 */
 		start_active_era(3);
@@ -3394,7 +3395,7 @@ fn payout_stakers_handles_weight_refund() {
 		Staking::reward_by_ids(vec![(11, 1)]);
 
 		// compute and ensure the reward amount is greater than zero.
-		let _ = current_total_payout_for_duration(reward_time_per_era()); // DEV TODO not sure if this is strictly necessary
+		let _ = current_total_payout_for_duration(reward_time_per_era());
 
 		/* Era 5 */
 		start_active_era(5);
@@ -3410,15 +3411,8 @@ fn payout_stakers_handles_weight_refund() {
 		let info = call.get_dispatch_info();
 		let result = call.dispatch(Origin::signed(20));
 		assert!(result.is_err());
-		// when there is an error the consumed weight == the max possible weight
-		assert_eq!(extract_actual_weight(&result, &info), max_nom_rewarded_weight);
-
-
-		// notes:
-		// https://github.com/paritytech/substrate/blob/master/frame/utility/src/tests.rs#L355
-		// make sure your tests use some well controlled weight configuration
-		//    maybe look at how weight info is configured (T::WeightInfo), and see if you can compare to
-		// T::WeightInfo::payout_stakers_alive_staked(num_nominators)
+		// when there is an error the consumed weight == weight when there are 0 payouts
+		assert_eq!(extract_actual_weight(&result, &info), zero_payouts_weight);
 	});
 }
 
