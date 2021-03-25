@@ -2978,6 +2978,9 @@ fn claim_reward_at_the_last_era_and_no_double_claim_and_invalid_claim() {
 	// * an invalid era to claim doesn't update last_reward
 	// * double claim of one era fails
 	ExtBuilder::default().nominate(true).build_and_execute(|| {
+		// Consumed weight for all payout_stakers dispatches that fail
+		let err_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
+
 		let init_balance_10 = Balances::total_balance(&10);
 		let init_balance_100 = Balances::total_balance(&100);
 
@@ -3023,19 +3026,19 @@ fn claim_reward_at_the_last_era_and_no_double_claim_and_invalid_claim() {
 		assert_noop!(
 			Staking::payout_stakers(Origin::signed(1337), 11, 0),
 			// Fail: Era out of history
-			Error::<Test>::InvalidEraToReward
+			Error::<Test>::InvalidEraToReward.with_weight(err_weight)
 		);
 		assert_ok!(Staking::payout_stakers(Origin::signed(1337), 11, 1));
 		assert_ok!(Staking::payout_stakers(Origin::signed(1337), 11, 2));
 		assert_noop!(
 			Staking::payout_stakers(Origin::signed(1337), 11, 2),
 			// Fail: Double claim
-			Error::<Test>::AlreadyClaimed
+			Error::<Test>::AlreadyClaimed.with_weight(err_weight)
 		);
 		assert_noop!(
 			Staking::payout_stakers(Origin::signed(1337), 11, active_era),
 			// Fail: Era not finished yet
-			Error::<Test>::InvalidEraToReward
+			Error::<Test>::InvalidEraToReward.with_weight(err_weight)
 		);
 
 		// Era 0 can't be rewarded anymore and current era can't be rewarded yet
