@@ -26,6 +26,7 @@ use sp_staking::offence::OffenceDetails;
 use frame_support::{
 	assert_ok, assert_noop, StorageMap,
 	traits::{Currency, ReservableCurrency, OnInitialize},
+	weights::extract_actual_weight,
 };
 use pallet_balances::Error as BalancesError;
 use substrate_test_utils::assert_eq_uvec;
@@ -3330,32 +3331,94 @@ fn payout_stakers_handles_basic_errors() {
 
 #[test]
 fn payout_stakers_handles_weight_refund() {
+	// DEV TODO maybe move or use a different import path? This is used for `.get_dispatch_info` and `.dispatch`
+	use crate::sp_api_hidden_includes_decl_storage::hidden_include::dispatch::{GetDispatchInfo, Dispatchable};
 	ExtBuilder::default().has_stakers(false).build_and_execute(|| {
+
+		// let max_nom_rewarded: u32 = Staking::MaxNominatorRewardedPerValidator(); // DEV TODO figure out how to get this to grab the const
+		let max_nom_rewarded: u32 = 64;
+		let max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(max_nom_rewarded);
+		let half_max_nom_rewarded = max_nom_rewarded / 2; // TODO use different division
+		let half_max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(half_max_nom_rewarded + 1);
+
 		let balance = 1000;
 		// Create an active validator stash/controller pair each with balance
+		// DEV TODO this will need be adjust for a more controlled weight
 		bond_validator(11, 10, balance); // Default(64)
 		// MaxNominatorRewardedPerValidator is set to 64, so we do half of that (counting the validator as nominating itself).
-		for i in 0..31 {
-			bond_nominator(1000 + i, 100 + i, balance + i as Balance, vec![11]);
+		for i in 0..half_max_nom_rewarded {
+			bond_nominator((1000 + i).into(), (100 + i).into(), balance + i as Balance, vec![11]);
 		}
-		// Progress to era 1
-		mock::start_active_era(1);
-		// Reward the validator we have created with 1 reward point
+		/* Era 1*/
+		// the validator does not get any rewards in this era
+		start_active_era(1);
+
+		/* Era 2 */
+		start_active_era(2);
+
+		// collect payouts when the validator got no rewards for the era
+		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 1));
+		let info = call.get_dispatch_info();
+		let result = call.dispatch(Origin::signed(20));
+		assert_ok!(result);
+		let zero_payouts_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
+		// DEV TODO Maybe assert the rewards are 0
+		assert_eq!(extract_actual_weight(&result, &info), zero_payouts_weight);
+
+		// give the validator reward points for the first time so they can collect in the next era
 		Staking::reward_by_ids(vec![(11, 1)]);
 
 		// compute and ensure the reward amount is greater than zero.
 		let _ = current_total_payout_for_duration(reward_time_per_era()); // DEV TODO not sure if this is strictly necessary
-		// Progress to era 2 so we can collect rewards for era 1
-		mock::start_active_era(2);
-		// Test with half of MaxNominators
-		assert_ok!(Staking::payout_stakers(Origin::signed(20), 11, 1));
+
+		/* Era 3 */
+		start_active_era(3);
+
+		// collect payouts when the validator had `half_max_nom_rewarded` nominators
+		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 2));
+		let info = call.get_dispatch_info();
+		let result = call.dispatch(Origin::signed(20));
+		assert_ok!(result);
+		assert_eq!(extract_actual_weight(&result, &info), half_max_nom_rewarded_weight);
+
+		// Add enough nominators so that we are at the exact limit. They will be active nominators
+		// in the next era.
+		for i in half_max_nom_rewarded..max_nom_rewarded {
+			bond_nominator((1000 + i).into(), (100 + i).into(), balance + i as Balance, vec![11]);
+		}
+
+		/* Era 4 */
+		// we now have `max_nom_rewarded` nominators actively nominating our validator
+		start_active_era(4);
+
+		Staking::reward_by_ids(vec![(11, 1)]);
+
+		// compute and ensure the reward amount is greater than zero.
+		let _ = current_total_payout_for_duration(reward_time_per_era()); // DEV TODO not sure if this is strictly necessary
+
+		/* Era 5 */
+		start_active_era(5);
+		// collect payouts when the validator had `half_max_nom_rewarded` nominators
+		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 4));
+		let info = call.get_dispatch_info();
+		let result = call.dispatch(Origin::signed(20));
+		assert_ok!(result);
+		assert_eq!(extract_actual_weight(&result, &info), max_nom_rewarded_weight);
+
+		// try and collect payouts for an era that has already been collected
+		let call = TestRuntimeCall::Staking(StakingCall::payout_stakers(11, 4));
+		let info = call.get_dispatch_info();
+		let result = call.dispatch(Origin::signed(20));
+		assert!(result.is_err());
+		// when there is an error the consumed weight == the max possible weight
+		assert_eq!(extract_actual_weight(&result, &info), max_nom_rewarded_weight);
+
+
 		// notes:
 		// https://github.com/paritytech/substrate/blob/master/frame/utility/src/tests.rs#L355
 		// make sure your tests use some well controlled weight configuration
-
-		// TODO test with No rewards
-
-		// TODO Test with max nominators
+		//    maybe look at how weight info is configured (T::WeightInfo), and see if you can compare to
+		// T::WeightInfo::payout_stakers_alive_staked(num_nominators)
 	});
 }
 
