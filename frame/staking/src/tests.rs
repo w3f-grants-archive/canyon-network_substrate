@@ -3361,6 +3361,7 @@ fn payout_stakers_handles_weight_refund() {
 		let max_nom_rewarded: u32 = 64;
 		let max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(max_nom_rewarded);
 		let half_max_nom_rewarded = max_nom_rewarded.checked_div(2).unwrap();
+		// We add 1 to account for the validator
 		let half_max_nom_rewarded_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(half_max_nom_rewarded + 1);
 
 		let zero_payouts_weight = weights::SubstrateWeight::<Test>::payout_stakers_alive_staked(0);
@@ -3402,7 +3403,7 @@ fn payout_stakers_handles_weight_refund() {
 		assert_ok!(result);
 		assert_eq!(extract_actual_weight(&result, &info), half_max_nom_rewarded_weight);
 
-		// Add enough nominators so that we are at the exact limit. They will be active nominators
+		// Add enough nominators so that we are at the limit. They will be active nominators
 		// in the next era.
 		for i in half_max_nom_rewarded..max_nom_rewarded {
 			bond_nominator((1000 + i).into(), (100 + i).into(), balance + i as Balance, vec![11]);
