@@ -33,6 +33,31 @@ use crate::{
 /// Current version of the [`UncheckedExtrinsic`] format.
 const EXTRINSIC_VERSION: u8 = 4;
 
+pub type MerkleRoot = u8;
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+pub struct DataInfo {
+	///
+	pub data_size: u64,
+	///
+	pub data_root: MerkleRoot,
+}
+
+/// Maximum payload of data is 10 MB.
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+pub struct DataPayload(Vec<u8>);
+
+// TODO: Impl Codec manually.
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+pub struct Data {
+	///
+	pub payload: Option<DataPayload>,
+	///
+	pub info: DataInfo,
+}
+
+// TODO: Impl Debug for Data
+
 /// A extrinsic right from the external world. This is unchecked and so
 /// can contain a signature.
 #[derive(PartialEq, Eq, Clone)]
@@ -46,6 +71,8 @@ where
 	pub signature: Option<(Address, Signature, Extra)>,
 	/// The function that should be called.
 	pub function: Call,
+	///
+	pub data: Option<Data>,
 }
 
 #[cfg(feature = "std")]
@@ -73,6 +100,7 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 		Self {
 			signature: Some((signed, signature, extra)),
 			function,
+			data: None,
 		}
 	}
 
@@ -81,6 +109,22 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 		Self {
 			signature: None,
 			function,
+			data: None,
+		}
+	}
+
+	/// New instance of a signed extrinsic aka "transaction".
+	pub fn new_data_signed(
+		function: Call,
+		signed: Address,
+		signature: Signature,
+		extra: Extra,
+		data: Option<Data>,
+	) -> Self {
+		UncheckedExtrinsic {
+			signature: Some((signed, signature, extra)),
+			function,
+			data,
 		}
 	}
 }
@@ -90,6 +134,7 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 {
 	type Call = Call;
 
+	// TODO: add data info into SignaturePayload
 	type SignaturePayload = (
 		Address,
 		Signature,
@@ -101,6 +146,7 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 	}
 
 	fn new(function: Call, signed_data: Option<Self::SignaturePayload>) -> Option<Self> {
+		// TODO: new_data_signed
 		Some(if let Some((address, signature, extra)) = signed_data {
 			Self::new_signed(function, address, signature, extra)
 		} else {
@@ -241,6 +287,7 @@ where
 		Ok(Self {
 			signature: if is_signed { Some(Decode::decode(input)?) } else { None },
 			function: Decode::decode(input)?,
+			data: Decode::decode(input)?,
 		})
 	}
 }
@@ -266,6 +313,7 @@ where
 				}
 			}
 			self.function.encode_to(v);
+			self.data.encode_to(v);
 		})
 	}
 }
@@ -309,6 +357,7 @@ where
 	Extra: SignedExtension,
 {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		// TODO: Add Data field.
 		write!(
 			f,
 			"UncheckedExtrinsic({:?}, {:?})",

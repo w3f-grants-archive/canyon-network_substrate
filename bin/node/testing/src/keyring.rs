@@ -96,11 +96,13 @@ pub fn sign(xt: CheckedExtrinsic, spec_version: u32, tx_version: u32, genesis_ha
 			UncheckedExtrinsic {
 				signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra)),
 				function: payload.0,
+				data: None,
 			}
 		}
 		None => UncheckedExtrinsic {
 			signature: None,
 			function: xt.function,
+			data: None,
 		},
 	}
 }
