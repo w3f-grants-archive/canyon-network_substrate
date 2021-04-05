@@ -1368,6 +1368,9 @@ impl<T: Config> Pallet<T> {
 			.map(ExtrinsicDataSize::<T>::take)
 			.sum::<u64>();
 
+		const POA: [u8; 4] = *b"poa_";
+		digest.push(generic::DigestItem::Consensus(POA, block_size.encode()));
+
 		let extrinsics = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
 			.map(ExtrinsicData::<T>::take)
 			.collect();
