@@ -420,13 +420,20 @@ where
 			sp_tracing::info_span!("apply_extrinsic",
 				ext=?sp_core::hexdisplay::HexDisplay::from(&uxt.encode()))
 		);
+		// #[cfg(feature = "std")]
+		use sp_runtime::traits::Extrinsic;
+		// #[cfg(feature = "std")]
+		let data_size = uxt.data_size();
+		#[cfg(feature = "std")]
+		println!("----------- data_size: {:?}", uxt.data_size());
+
 		// Verify that the signature is good.
 		let xt = uxt.check(&Default::default())?;
 
 		// We don't need to make sure to `note_extrinsic` only after we know it's going to be
 		// executed to prevent it from leaking in storage since at this point, it will either
 		// execute or panic (and revert storage changes).
-		<frame_system::Pallet<System>>::note_extrinsic(to_note);
+		<frame_system::Pallet<System>>::note_extrinsic(to_note, data_size);
 
 		// AUDIT: Under no circumstances may this function panic from here onwards.
 

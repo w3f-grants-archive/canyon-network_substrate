@@ -127,6 +127,15 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 			data,
 		}
 	}
+
+	///
+	pub fn data_size(&self) -> u64 {
+		if let Some(ref d) = self.data {
+			d.info.data_size
+		} else {
+			Default::default()
+		}
+	}
 }
 
 impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
@@ -152,6 +161,10 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 		} else {
 			Self::new_unsigned(function)
 		})
+	}
+
+	fn data_size(&self) -> u64 {
+		self.data_size()
 	}
 }
 

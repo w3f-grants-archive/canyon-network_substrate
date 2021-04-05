@@ -651,6 +651,9 @@ pub trait Extrinsic: Sized + MaybeMallocSizeOf {
 	/// 2. Unsigned Transactions (no signature; represent "system calls" or other special kinds of calls)
 	/// 3. Signed Transactions (with signature; a regular transactions with known origin)
 	fn new(_call: Self::Call, _signed_data: Option<Self::SignaturePayload>) -> Option<Self> { None }
+
+	///
+	fn data_size(&self) -> u64 { Default::default() }
 }
 
 /// Implementor is an [`Extrinsic`] and provides metadata about this extrinsic.

@@ -563,6 +563,12 @@ pub mod pallet {
 	pub(super) type ExtrinsicData<T: Config> =
 		StorageMap<_, Twox64Concat, u32, Vec<u8>, ValueQuery>;
 
+	/// Extrinsics data for the current block (maps an extrinsic's index to its data).
+	#[pallet::storage]
+	#[pallet::getter(fn extrinsic_data_size)]
+	pub(super) type ExtrinsicDataSize<T: Config> =
+		StorageMap<_, Twox64Concat, u32, u64, ValueQuery>;
+
 	/// The current block number being processed. Set by `execute_block`.
 	#[pallet::storage]
 	#[pallet::getter(fn block_number)]
@@ -1358,6 +1364,10 @@ impl<T: Config> Pallet<T> {
 		let parent_hash = <ParentHash<T>>::get();
 		let mut digest = <Digest<T>>::get();
 
+		let block_size = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
+			.map(ExtrinsicDataSize::<T>::take)
+			.sum::<u64>();
+
 		let extrinsics = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
 			.map(ExtrinsicData::<T>::take)
 			.collect();
@@ -1479,8 +1489,9 @@ impl<T: Config> Pallet<T> {
 	///
 	/// This is required to be called before applying an extrinsic. The data will used
 	/// in [`Self::finalize`] to calculate the correct extrinsics root.
-	pub fn note_extrinsic(encoded_xt: Vec<u8>) {
+	pub fn note_extrinsic(encoded_xt: Vec<u8>, data_size: u64) {
 		ExtrinsicData::<T>::insert(Self::extrinsic_index().unwrap_or_default(), encoded_xt);
+		ExtrinsicDataSize::<T>::insert(Self::extrinsic_index().unwrap_or_default(), data_size);
 	}
 
 	/// To be called immediately after an extrinsic has been applied.
