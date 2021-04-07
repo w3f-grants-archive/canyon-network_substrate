@@ -1368,9 +1368,6 @@ impl<T: Config> Pallet<T> {
 			.map(ExtrinsicDataSize::<T>::take)
 			.sum::<u64>();
 
-		const POA: [u8; 4] = *b"poa_";
-		digest.push(generic::DigestItem::Consensus(POA, block_size.encode()));
-
 		let extrinsics = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
 			.map(ExtrinsicData::<T>::take)
 			.collect();
@@ -1398,6 +1395,26 @@ impl<T: Config> Pallet<T> {
 			);
 			digest.push(item);
 		}
+
+		use sp_consensus_poa::POA_ENGINE_ID;
+		let last_weave_size = digest
+			.logs()
+			.iter()
+			.find_map(|digest_item|
+				// TODO: Every header must has this digest item.
+				if let generic::DigestItem::PreRuntime(POA_ENGINE_ID, encoded) = digest_item {
+					let weave_size: Option<u64> = Decode::decode(&mut encoded.as_slice()).ok();
+					weave_size
+				} else {
+					None
+				}
+			)
+			.unwrap_or_default();
+
+		let block_size = 1u64;
+		let weave_size = last_weave_size + block_size;
+		log::info!("------------- system digest: {:?}, weave_size: {}", digest, weave_size);
+		digest.push(generic::DigestItem::Consensus(POA_ENGINE_ID, weave_size.encode()));
 
 		<T::Header as traits::Header>::new(number, extrinsics_root, storage_root, parent_hash, digest)
 	}

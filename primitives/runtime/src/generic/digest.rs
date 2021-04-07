@@ -73,7 +73,7 @@ impl<Hash> Digest<Hash> {
 
 /// Digest item that is able to encode/decode 'system' digest items and
 /// provide opaque access to other items.
-#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "std", derive(parity_util_mem::MallocSizeOf))]
 pub enum DigestItem<Hash> {
 	/// System digest item that contains the root of changes trie at given
@@ -110,6 +110,25 @@ pub enum DigestItem<Hash> {
 
 	/// Some other thing. Unsupported and experimental.
 	Other(Vec<u8>),
+}
+
+impl<Hash: sp_std::fmt::Debug> sp_std::fmt::Debug for DigestItem<Hash> {
+	#[cfg(feature = "std")]
+	fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		match self {
+			Self::ChangesTrieRoot(h) => write!(f, "ChangesTrieRoot({:?})", h),
+			Self::PreRuntime(id, d) => write!(f, "PreRuntime({}, {:?})", String::from_utf8_lossy(id), d),
+			Self::Consensus(id, d) => write!(f, "Consensus({}, {:?})", String::from_utf8_lossy(id), d),
+			Self::Seal(id, d) => write!(f, "Seal({}, {:?})", String::from_utf8_lossy(id), d),
+			Self::ChangesTrieSignal(s) => write!(f, "ChangesTrieSignal({:?})", s),
+			Self::Other(s) => write!(f, "Other({:?})", s),
+		}
+	}
+
+	#[cfg(not(feature = "std"))]
+	fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+		Ok(())
+	}
 }
 
 /// Available changes trie signals.

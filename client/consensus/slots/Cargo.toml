@@ -36,5 +36,7 @@ thiserror = "1.0.21"
 impl-trait-for-tuples = "0.2.1"
 async-trait = "0.1.42"
 
+sp-consensus-poa = { path = "../../../primitives/consensus/poa" }
+
 [dev-dependencies]
 substrate-test-runtime-client = { version = "2.0.0", path = "../../../test-utils/runtime/client" }
