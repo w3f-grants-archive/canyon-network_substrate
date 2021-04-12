@@ -663,7 +663,7 @@ pub fn spawn_tasks<TBl, TBackend, TExPool, TRpc, TCl>(
 		deny_unsafe, rpc_middleware, &config, task_manager.spawn_handle(),
 		client.clone(), transaction_pool.clone(), keystore.clone(),
 		on_demand.clone(), remote_blockchain.clone(), &*rpc_extensions_builder,
-		backend.offchain_storage(), system_rpc_tx.clone()
+		backend.offchain_storage(), backend.perma_data_storage(), system_rpc_tx.clone(),
 	);
 	let rpc_metrics = sc_rpc_server::RpcMetrics::new(config.prometheus_registry())?;
 	let rpc = start_rpc_servers(&config, gen_handler, rpc_metrics.clone())?;
@@ -751,6 +751,7 @@ fn gen_handler<TBl, TBackend, TExPool, TRpc, TCl>(
 	remote_blockchain: Option<Arc<dyn RemoteBlockchain<TBl>>>,
 	rpc_extensions_builder: &(dyn RpcExtensionBuilder<Output = TRpc> + Send),
 	offchain_storage: Option<<TBackend as sc_client_api::backend::Backend<TBl>>::OffchainStorage>,
+	perma_data_storage: Option<<TBackend as sc_client_api::backend::Backend<TBl>>::PermaStorage>,
 	system_rpc_tx: TracingUnboundedSender<sc_rpc::system::Request<TBl>>
 ) -> sc_rpc_server::RpcHandler<sc_rpc::Metadata>
 	where
@@ -766,7 +767,7 @@ fn gen_handler<TBl, TBackend, TExPool, TRpc, TCl>(
 			sp_session::SessionKeys<TBl> +
 			sp_api::Metadata<TBl>,
 {
-	use sc_rpc::{chain, state, author, system, offchain};
+	use sc_rpc::{chain, state, author, system, offchain, data_storage};
 
 	let system_info = sc_rpc::system::SystemInfo {
 		chain_name: config.chain_spec.name().into(),
@@ -823,6 +824,11 @@ fn gen_handler<TBl, TBackend, TExPool, TRpc, TCl>(
 		offchain::OffchainApi::to_delegate(offchain)
 	});
 
+	let maybe_perma_storage_rpc = perma_data_storage.map(|storage| {
+		let perma_storage = data_storage::DataStorage::new(storage, deny_unsafe);
+		data_storage::DataStorageApi::to_delegate(perma_storage)
+	});
+
 	sc_rpc_server::rpc_handler(
 		(
 			state::StateApi::to_delegate(state),
@@ -831,6 +837,7 @@ fn gen_handler<TBl, TBackend, TExPool, TRpc, TCl>(
 			maybe_offchain_rpc,
 			author::AuthorApi::to_delegate(author),
 			system::SystemApi::to_delegate(system),
+			maybe_perma_storage_rpc,
 			rpc_extensions_builder.build(deny_unsafe, task_executor),
 		),
 		rpc_middleware

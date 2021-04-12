@@ -38,3 +38,4 @@ pub mod offchain;
 pub mod state;
 pub mod child_state;
 pub mod system;
+pub mod data_storage;

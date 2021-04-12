@@ -30,6 +30,7 @@
 
 pub mod light;
 pub mod offchain;
+pub mod perma_storage;
 
 #[cfg(any(feature = "with-kvdb-rocksdb", test))]
 pub mod bench;
@@ -367,6 +368,8 @@ pub(crate) mod columns {
 	pub const CACHE: u32 = 10;
 	/// Transactions
 	pub const TRANSACTION: u32 = 11;
+	/// Perma storage.
+	pub const PERMA_STORAGE: u32 = 12;
 }
 
 struct PendingBlock<Block: BlockT> {
@@ -970,6 +973,7 @@ impl<T: Clone> FrozenForDuration<T> {
 pub struct Backend<Block: BlockT> {
 	storage: Arc<StorageDb<Block>>,
 	offchain_storage: offchain::LocalStorage,
+	perma_data_storage: perma_storage::DataStorage,
 	changes_tries_storage: DbChangesTrieStorage<Block>,
 	blockchain: BlockchainDb<Block>,
 	canonicalization_delay: u64,
@@ -1042,6 +1046,7 @@ impl<Block: BlockT> Backend<Block> {
 			prefix_keys: !config.source.supports_ref_counting(),
 		};
 		let offchain_storage = offchain::LocalStorage::new(db.clone());
+		let perma_data_storage = perma_storage::DataStorage::new(db.clone());
 		let changes_tries_storage = DbChangesTrieStorage::new(
 			db,
 			blockchain.header_metadata_cache.clone(),
@@ -1061,6 +1066,7 @@ impl<Block: BlockT> Backend<Block> {
 		Ok(Backend {
 			storage: Arc::new(storage_db),
 			offchain_storage,
+			perma_data_storage,
 			changes_tries_storage,
 			blockchain,
 			canonicalization_delay,
@@ -1735,6 +1741,7 @@ impl<Block: BlockT> sc_client_api::backend::Backend<Block> for Backend<Block> {
 	type Blockchain = BlockchainDb<Block>;
 	type State = SyncingCachingState<RefTrackingState<Block>, Block>;
 	type OffchainStorage = offchain::LocalStorage;
+	type PermaStorage = perma_storage::DataStorage;
 
 	fn begin_operation(&self) -> ClientResult<Self::BlockImportOperation> {
 		let mut old_state = self.state_at(BlockId::Hash(Default::default()))?;
@@ -1865,6 +1872,10 @@ impl<Block: BlockT> sc_client_api::backend::Backend<Block> for Backend<Block> {
 
 	fn offchain_storage(&self) -> Option<Self::OffchainStorage> {
 		Some(self.offchain_storage.clone())
+	}
+
+	fn perma_data_storage(&self) -> Option<Self::PermaStorage> {
+		Some(self.perma_data_storage.clone())
 	}
 
 	fn usage_info(&self) -> Option<UsageInfo> {

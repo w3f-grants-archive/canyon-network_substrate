@@ -123,6 +123,7 @@ impl<S, Block> ClientBackend<Block> for Backend<S, HashFor<Block>>
 	type Blockchain = Blockchain<S>;
 	type State = GenesisOrUnavailableState<HashFor<Block>>;
 	type OffchainStorage = InMemOffchainStorage;
+	type PermaStorage = sp_core::perma_storage::InMemoryPermaStorage;
 
 	fn begin_operation(&self) -> ClientResult<Self::BlockImportOperation> {
 		Ok(ImportOperation {
@@ -220,6 +221,10 @@ impl<S, Block> ClientBackend<Block> for Backend<S, HashFor<Block>>
 	}
 
 	fn offchain_storage(&self) -> Option<Self::OffchainStorage> {
+		None
+	}
+
+	fn perma_data_storage(&self) -> Option<Self::PermaStorage> {
 		None
 	}
 

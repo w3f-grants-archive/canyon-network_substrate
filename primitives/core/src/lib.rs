@@ -66,6 +66,7 @@ pub mod hash;
 #[cfg(feature = "std")]
 mod hasher;
 pub mod offchain;
+pub mod perma_storage;
 pub mod sandbox;
 pub mod uint;
 mod changes_trie;
