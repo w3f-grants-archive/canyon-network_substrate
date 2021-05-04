@@ -23,7 +23,7 @@ use codec::{Decode, Encode, EncodeLike, Input, Error};
 use crate::{
 	traits::{
 		self, Member, MaybeDisplay, SignedExtension, Checkable, Extrinsic, ExtrinsicMetadata,
-		IdentifyAccount,
+		IdentifyAccount, Hash as HashT,
 	},
 	generic::CheckedExtrinsic,
 	transaction_validity::{TransactionValidityError, InvalidTransaction},
@@ -33,28 +33,36 @@ use crate::{
 /// Current version of the [`UncheckedExtrinsic`] format.
 const EXTRINSIC_VERSION: u8 = 4;
 
-pub type MerkleRoot = u8;
-
+/// Information about the transaction data.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
-pub struct DataInfo {
-	///
+pub struct DataInfo<Hash: HashT> {
+	/// Number of data in bytes.
 	pub data_size: u64,
-	///
-	pub data_root: MerkleRoot,
+	/// Merkle root of data chunks.
+	pub data_root: Hash::Output,
 }
 
-/// Maximum payload of data is 10 MB.
+/// Raw data payload.
+///
+/// The maximum payload of data is 10 MiB(10 * 1024 * 1024 bytes).
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 pub struct DataPayload(Vec<u8>);
 
-// TODO: Impl Codec manually.
+/// Type that represents the data of a transaction.
+///
+/// It can have an optional payload(<= 10Mib).
+///
+/// TODO: Impl Codec manually, the payload should be skipped.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
-pub struct Data {
-	///
+pub struct GenericData<Hash: HashT> {
+	/// Raw bytes of data.
 	pub payload: Option<DataPayload>,
-	///
-	pub info: DataInfo,
+	/// Data info.
+	pub info: DataInfo<Hash>,
 }
+
+/// `GenericData` with concrete `BlakeTwo256` hasher.
+pub type Data = GenericData<crate::traits::BlakeTwo256>;
 
 // TODO: Impl Debug for Data
 
@@ -71,7 +79,7 @@ where
 	pub signature: Option<(Address, Signature, Extra)>,
 	/// The function that should be called.
 	pub function: Call,
-	///
+	/// The perma data stored on the network.
 	pub data: Option<Data>,
 }
 
@@ -128,7 +136,7 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 		}
 	}
 
-	///
+	/// Number of data in bytes.
 	pub fn data_size(&self) -> u64 {
 		if let Some(ref d) = self.data {
 			d.info.data_size
