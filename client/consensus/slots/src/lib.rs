@@ -313,11 +313,11 @@ pub trait SimpleSlotWorker<B: BlockT> {
 		use sp_consensus_poa::POA_ENGINE_ID;
 
 		// TODO: Verify poa-related digest item.
-		let weave_size = chain_head.digest().logs().iter().find_map(|digest_item|
+		let weave_size = slot_info.chain_head.digest().logs().iter().find_map(|digest_item|
 			if let DigestItem::Consensus(POA_ENGINE_ID, encoded) = digest_item {
 				// TODO: no need to really decode it, just check it here.
 				let weave_size: Option<u64> = Decode::decode(&mut encoded.as_slice()).ok();
-				if !chain_head.number().is_zero() {
+				if !slot_info.chain_head.number().is_zero() {
 					assert!(
 						weave_size.is_some(),
 						"weave_size must exist in the non-genesis header"
