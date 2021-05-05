@@ -28,6 +28,7 @@ mod digest;
 #[cfg(test)]
 mod tests;
 
+pub use self::unchecked_extrinsic::{Data, DataInfo, DataPayload, GenericData};
 pub use self::unchecked_extrinsic::{UncheckedExtrinsic, SignedPayload};
 pub use self::era::{Era, Phase};
 pub use self::checked_extrinsic::CheckedExtrinsic;
