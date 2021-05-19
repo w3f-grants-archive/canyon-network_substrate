@@ -48,6 +48,12 @@ pub struct DataInfo<Hash: HashT> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 pub struct DataPayload(Vec<u8>);
 
+impl From<Vec<u8>> for DataPayload {
+	fn from(inner: Vec<u8>) -> Self {
+		Self(inner)
+	}
+}
+
 /// Type that represents the data of a transaction.
 ///
 /// It can have an optional payload(<= 10Mib).
@@ -59,6 +65,24 @@ pub struct GenericData<Hash: HashT> {
 	pub payload: Option<DataPayload>,
 	/// Data info.
 	pub info: DataInfo<Hash>,
+}
+
+const CHUNK_SIZE: usize = 256 * 1024;
+
+impl<Hash: HashT> From<Vec<u8>> for GenericData<Hash> {
+	fn from(raw_bytes: Vec<u8>) -> Self {
+		let chunks = raw_bytes.chunks(CHUNK_SIZE).map(|c| c.to_vec()).collect();
+		let data_root = Hash::ordered_trie_root(chunks);
+		let data_size = raw_bytes.len() as u64;
+		let payload = Some(raw_bytes.into());
+		Self {
+			payload,
+			info: DataInfo {
+				data_size,
+				data_root,
+			}
+		}
+	}
 }
 
 /// `GenericData` with concrete `BlakeTwo256` hasher.
