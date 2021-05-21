@@ -420,12 +420,9 @@ where
 			sp_tracing::info_span!("apply_extrinsic",
 				ext=?sp_core::hexdisplay::HexDisplay::from(&uxt.encode()))
 		);
-		// #[cfg(feature = "std")]
 		use sp_runtime::traits::Extrinsic;
-		// #[cfg(feature = "std")]
 		let data_size = uxt.data_size();
-		#[cfg(feature = "std")]
-		println!("----------- data_size: {:?}", uxt.data_size());
+		frame_support::log::debug!(target: "executive", "extrinsic's data_size: {:?}", data_size);
 
 		// Verify that the signature is good.
 		let xt = uxt.check(&Default::default())?;

@@ -1411,9 +1411,8 @@ impl<T: Config> Pallet<T> {
 			)
 			.unwrap_or_default();
 
-		let block_size = 1u64;
 		let weave_size = last_weave_size + block_size;
-		log::info!("------------- system digest: {:?}, weave_size: {}", digest, weave_size);
+		log::info!("system digest: {:?}, block_size: {:?}, latest weave_size: {}", block_size, digest, weave_size);
 		digest.push(generic::DigestItem::Consensus(POA_ENGINE_ID, weave_size.encode()));
 
 		<T::Header as traits::Header>::new(number, extrinsics_root, storage_root, parent_hash, digest)
