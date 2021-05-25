@@ -12,13 +12,16 @@ use crate::{
 };
 
 /// 256KiB per chunk.
-const CHUNK_SIZE: usize = 256 * 1024;
+pub const CHUNK_SIZE: usize = 256 * 1024;
+
+/// Maximum size of a `data_path`, in bytes.
+pub const PATH_SIZE: usize = 256 * 1024;
 
 /// Maximum bytes of data payload is 10MiB.
-const MAXIMUM_DATA_PAYLOAD: u32 = 10 * 1024 * 1024;
+pub const MAXIMUM_DATA_PAYLOAD: u32 = 10 * 1024 * 1024;
 
 /// State info for a stored transaction data.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct DataInfo<Hash: HashT> {
 	/// Number of data in bytes.
 	pub size: u64,
@@ -34,8 +37,14 @@ pub struct DataPayload(Vec<u8>);
 
 impl From<Vec<u8>> for DataPayload {
 	fn from(inner: Vec<u8>) -> Self {
-		assert!(MAXIMUM_DATA_PAYLOAD as usize > inner.len());
 		Self(inner)
+	}
+}
+
+impl DataPayload {
+	/// Returns true if the payload does not exceed the MAXIMUM_DATA_PAYLOAD.
+	pub fn is_valid(&self) -> bool {
+		self.0.len() < MAXIMUM_DATA_PAYLOAD as usize
 	}
 }
 

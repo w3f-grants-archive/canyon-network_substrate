@@ -34,7 +34,10 @@ pub use self::era::{Era, Phase};
 pub use self::checked_extrinsic::CheckedExtrinsic;
 pub use self::header::Header;
 pub use self::block::{Block, SignedBlock, BlockId};
-pub use self::transaction_data::{Data, DataInfo, DataPayload, TransactionData};
+pub use self::transaction_data::{
+	Data, DataInfo, DataPayload, TransactionData,
+	CHUNK_SIZE, MAXIMUM_DATA_PAYLOAD, PATH_SIZE,
+};
 pub use self::digest::{
 	Digest, DigestItem, DigestItemRef, OpaqueDigestItemId, ChangesTrieSignal,
 };
