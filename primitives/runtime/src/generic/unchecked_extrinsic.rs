@@ -25,7 +25,7 @@ use crate::{
 		self, Member, MaybeDisplay, SignedExtension, Checkable, Extrinsic, ExtrinsicMetadata,
 		IdentifyAccount,
 	},
-	generic::CheckedExtrinsic,
+	generic::{CheckedExtrinsic, Data},
 	transaction_validity::{TransactionValidityError, InvalidTransaction},
 	OpaqueExtrinsic,
 };
@@ -36,7 +36,7 @@ const EXTRINSIC_VERSION: u8 = 4;
 /// A extrinsic right from the external world. This is unchecked and so
 /// can contain a signature.
 #[derive(PartialEq, Eq, Clone)]
-pub struct UncheckedExtrinsic<Address, Call, Signature, Extra>
+pub struct UncheckedExtrinsic<Address, Call, Signature, Extra, TransactionData = Data>
 where
 	Extra: SignedExtension
 {
@@ -46,6 +46,8 @@ where
 	pub signature: Option<(Address, Signature, Extra)>,
 	/// The function that should be called.
 	pub function: Call,
+	/// The data stored permanently on the network.
+	pub data: Option<TransactionData>,
 }
 
 #[cfg(feature = "std")]
@@ -73,6 +75,7 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 		Self {
 			signature: Some((signed, signature, extra)),
 			function,
+			data: None,
 		}
 	}
 
@@ -81,6 +84,7 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 		Self {
 			signature: None,
 			function,
+			data: None,
 		}
 	}
 }
@@ -241,6 +245,7 @@ where
 		Ok(Self {
 			signature: if is_signed { Some(Decode::decode(input)?) } else { None },
 			function: Decode::decode(input)?,
+			data: None,
 		})
 	}
 }
