@@ -87,6 +87,26 @@ impl<Address, Call, Signature, Extra: SignedExtension>
 			data: None,
 		}
 	}
+
+	/// New instance of a signed extrinsic aka "transaction".
+	pub fn new_data_signed(
+		function: Call,
+		signed: Address,
+		signature: Signature,
+		extra: Extra,
+		data: Option<Data>,
+	) -> Self {
+		UncheckedExtrinsic {
+			signature: Some((signed, signature, extra)),
+			function,
+			data,
+		}
+	}
+
+	/// Number of data in bytes.
+	pub fn data_size(&self) -> u64 {
+		self.data.as_ref().map(|d| d.info.size).unwrap_or_default()
+	}
 }
 
 impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
@@ -110,6 +130,10 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 		} else {
 			Self::new_unsigned(function)
 		})
+	}
+
+	fn data_size(&self) -> u64 {
+		self.data_size()
 	}
 }
 
@@ -245,7 +269,7 @@ where
 		Ok(Self {
 			signature: if is_signed { Some(Decode::decode(input)?) } else { None },
 			function: Decode::decode(input)?,
-			data: None,
+			data: Decode::decode(input)?,
 		})
 	}
 }
@@ -271,6 +295,7 @@ where
 				}
 			}
 			self.function.encode_to(v);
+			self.data.encode_to(v);
 		})
 	}
 }
