@@ -1414,6 +1414,7 @@ impl<T: Config> Pallet<T> {
 
 		let weave_size = last_weave_size + block_size;
 		log::info!(
+			target: "runtime::system",
 			"system digest: {:?}, block_size: {:?}, latest weave_size: {}",
 			block_size,
 			digest,
@@ -1514,8 +1515,9 @@ impl<T: Config> Pallet<T> {
 	///
 	/// This is required to be called before applying an extrinsic. The data will used
 	/// in [`Self::finalize`] to calculate the correct extrinsics root.
-	pub fn note_extrinsic(encoded_xt: Vec<u8>) {
+	pub fn note_extrinsic(encoded_xt: Vec<u8>, data_size: u64) {
 		ExtrinsicData::<T>::insert(Self::extrinsic_index().unwrap_or_default(), encoded_xt);
+		ExtrinsicDataSize::<T>::insert(Self::extrinsic_index().unwrap_or_default(), data_size);
 	}
 
 	/// To be called immediately after an extrinsic has been applied.
