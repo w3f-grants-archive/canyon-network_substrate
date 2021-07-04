@@ -306,7 +306,7 @@ pub trait SimpleSlotWorker<B: BlockT> {
 			}
 		};
 
-		let mut logs = self.pre_digest_data(slot, &claim);
+		let logs = self.pre_digest_data(slot, &claim);
 
 		// deadline our production to 98% of the total time left for proposing. As we deadline
 		// the proposing below to the same total time left, the 2% margin should be enough for

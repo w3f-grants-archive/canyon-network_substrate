@@ -420,7 +420,6 @@ where
 			sp_tracing::info_span!("apply_extrinsic",
 				ext=?sp_core::hexdisplay::HexDisplay::from(&uxt.encode()))
 		);
-
 		// Verify that the signature is good.
 		let xt = uxt.check(&Default::default())?;
 
