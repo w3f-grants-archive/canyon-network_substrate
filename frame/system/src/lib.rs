@@ -563,12 +563,6 @@ pub mod pallet {
 	pub(super) type ExtrinsicData<T: Config> =
 		StorageMap<_, Twox64Concat, u32, Vec<u8>, ValueQuery>;
 
-	/// Extrinsics data for the current block (maps an extrinsic's index to its data).
-	#[pallet::storage]
-	#[pallet::getter(fn extrinsic_data_size)]
-	pub(super) type ExtrinsicDataSize<T: Config> =
-		StorageMap<_, Twox64Concat, u32, u64, ValueQuery>;
-
 	/// The current block number being processed. Set by `execute_block`.
 	#[pallet::storage]
 	#[pallet::getter(fn block_number)]
@@ -1364,10 +1358,6 @@ impl<T: Config> Pallet<T> {
 		let parent_hash = <ParentHash<T>>::get();
 		let mut digest = <Digest<T>>::get();
 
-		let block_size = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
-			.map(ExtrinsicDataSize::<T>::take)
-			.sum::<u64>();
-
 		let extrinsics = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
 			.map(ExtrinsicData::<T>::take)
 			.collect();
@@ -1395,32 +1385,6 @@ impl<T: Config> Pallet<T> {
 			);
 			digest.push(item);
 		}
-
-		use sp_runtime::ConsensusEngineId;
-		const POA_ENGINE_ID: ConsensusEngineId = [b'p', b'o', b'a', b'_'];
-		let last_weave_size = digest
-			.logs()
-			.iter()
-			.find_map(|digest_item|
-				// TODO: Every header must has this digest item.
-				if let generic::DigestItem::PreRuntime(POA_ENGINE_ID, encoded) = digest_item {
-					let weave_size: Option<u64> = Decode::decode(&mut encoded.as_slice()).ok();
-					weave_size
-				} else {
-					None
-				}
-			)
-			.unwrap_or_default();
-
-		let weave_size = last_weave_size + block_size;
-		log::info!(
-			target: "runtime::system",
-			"system digest: {:?}, block_size: {:?}, latest weave_size: {}",
-			block_size,
-			digest,
-			weave_size,
-		);
-		digest.push(generic::DigestItem::Consensus(POA_ENGINE_ID, weave_size.encode()));
 
 		<T::Header as traits::Header>::new(number, extrinsics_root, storage_root, parent_hash, digest)
 	}
@@ -1515,9 +1479,8 @@ impl<T: Config> Pallet<T> {
 	///
 	/// This is required to be called before applying an extrinsic. The data will used
 	/// in [`Self::finalize`] to calculate the correct extrinsics root.
-	pub fn note_extrinsic(encoded_xt: Vec<u8>, data_size: u64) {
+	pub fn note_extrinsic(encoded_xt: Vec<u8>) {
 		ExtrinsicData::<T>::insert(Self::extrinsic_index().unwrap_or_default(), encoded_xt);
-		ExtrinsicDataSize::<T>::insert(Self::extrinsic_index().unwrap_or_default(), data_size);
 	}
 
 	/// To be called immediately after an extrinsic has been applied.

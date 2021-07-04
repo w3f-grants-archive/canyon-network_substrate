@@ -421,21 +421,13 @@ where
 				ext=?sp_core::hexdisplay::HexDisplay::from(&uxt.encode()))
 		);
 
-		use sp_runtime::traits::Extrinsic;
-		let data_size = uxt.data_size();
-		frame_support::log::debug!(
-			target: "runtime::executive",
-			"extrinsic's data_size: {:?}",
-			data_size,
-		);
-
 		// Verify that the signature is good.
 		let xt = uxt.check(&Default::default())?;
 
 		// We don't need to make sure to `note_extrinsic` only after we know it's going to be
 		// executed to prevent it from leaking in storage since at this point, it will either
 		// execute or panic (and revert storage changes).
-		<frame_system::Pallet<System>>::note_extrinsic(to_note, data_size);
+		<frame_system::Pallet<System>>::note_extrinsic(to_note);
 
 		// AUDIT: Under no circumstances may this function panic from here onwards.
 
