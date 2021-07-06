@@ -482,6 +482,20 @@ where
 	}
 }
 
+impl<T, S, P, R, K> InherentDataProviderExt for (T, S, P, R, K)
+where
+	T: Deref<Target = Timestamp>,
+	S: Deref<Target = Slot>,
+{
+	fn timestamp(&self) -> Timestamp {
+		*self.0.deref()
+	}
+
+	fn slot(&self) -> Slot {
+		*self.1.deref()
+	}
+}
+
 impl<T, S> InherentDataProviderExt for (T, S)
 where
 	T: Deref<Target = Timestamp>,
